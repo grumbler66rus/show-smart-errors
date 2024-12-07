@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [ $EUID -ne 0 ] ; then echo "Run by superuser!" ; exit; fi
+
+for D in /dev/sd? ;
+do
+  smartctl -i $D >/dev/null && (
+    echo SMART of $D
+    smartctl -A $D | awk 'BEGIN{ rc="GOOD"};/^(  5|19[6-8])/{if($10>0){print "Disk Error: "$2" = "$10; rc="BAD"}} END{print rc; if(rc=="BAD"){exit 1}} '
+  )
+  if test '!' $?; then
+    echo $(smartctl -i /dev/sda) | sed 's/.*Device Model:/(Model:/; s/ *Serial Number: \([a-zA-Z0-9]*\).*/, SN: \1)/'
+  fi
+done
